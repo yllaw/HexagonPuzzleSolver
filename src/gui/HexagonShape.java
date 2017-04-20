@@ -32,7 +32,6 @@ public class HexagonShape extends Region {
 
 	private final double angle30degree = Math.PI / 6;
 	
-	//public double centerX, centerY;
 
 	public HexagonShape(double centerX, double centerY) {
 		
