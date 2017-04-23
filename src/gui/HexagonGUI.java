@@ -5,9 +5,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
 
 import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import hexagon.Hexagon;
 import hexagon.HexagonPosition;
@@ -16,11 +18,14 @@ import javafx.application.Application;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -38,7 +43,7 @@ public class HexagonGUI extends Application {
 	// Pane for Hexagon flower
 	Pane p;
 
-	//HexagonShapes for flower
+	// HexagonShapes for flower
 	HexagonShape h1;
 	HexagonShape h2;
 	HexagonShape h3;
@@ -47,19 +52,21 @@ public class HexagonGUI extends Application {
 	HexagonShape h6;
 	HexagonShape h7;
 
-	//Solution count & selected index
-	Text selectedIndexOverListSize = new Text(25, 50, "1. Load your Hexagon List! \n2. Click Solve!");
+	// Solution count & selected index, also displays instructions
+	Text infoText = new Text(25, 50, "1. Load your Hexagon List! \n2. Click Solve!");
 	// Hexagon data
 	ArrayList<Hexagon> sevenHexagons = new ArrayList<>();
-	// allSolutions to sevenHexagons
-	List<List<HexagonPosition>> allSolutions;
+	// allSolutions for this.sevenHexagons
+	List<List<HexagonPosition>> allSolutions = new ArrayList<>();
 	// Index of current solution
 	int selectedSolutionIndex = 0;
-	// sevenHexagons solved?
+	// has this.sevenHexagons been solved?
 	boolean solved = false;
-	// TODO: clear allSolutions when choosing new file
+	Stage primaryStage;
+
 	@Override
 	public void start(Stage primaryStage) {
+		this.primaryStage = primaryStage;
 		BorderPane bp = new BorderPane();
 		this.p = new Pane();
 
@@ -76,10 +83,10 @@ public class HexagonGUI extends Application {
 		Menu fileMenu = new Menu("_File");
 
 		// File Menu Items
-		MenuItem load = new MenuItem("Load Hexagons...");
-		load.setOnAction(e -> {
-			try {
-				sevenHexagons = loadFromFile();// also colors HexagonShapes
+		MenuItem createNew = new MenuItem("New Hexagon List...");
+		createNew.setOnAction(e -> {
+			sevenHexagons = createHexagonList();
+			if (sevenHexagons != null) {
 				this.h1.loadHexagon(sevenHexagons.get(0).getColorList(), sevenHexagons.get(0).getID());
 				this.h2.loadHexagon(sevenHexagons.get(1).getColorList(), sevenHexagons.get(1).getID());
 				this.h3.loadHexagon(sevenHexagons.get(2).getColorList(), sevenHexagons.get(2).getID());
@@ -87,7 +94,31 @@ public class HexagonGUI extends Application {
 				this.h5.loadHexagon(sevenHexagons.get(4).getColorList(), sevenHexagons.get(4).getID());
 				this.h6.loadHexagon(sevenHexagons.get(5).getColorList(), sevenHexagons.get(5).getID());
 				this.h7.loadHexagon(sevenHexagons.get(6).getColorList(), sevenHexagons.get(6).getID());
+			} else
+				throw new NullPointerException();
+		});
+		fileMenu.getItems().add(createNew);
 
+		MenuItem load = new MenuItem("Load Hexagons...");
+		load.setOnAction(e -> {
+			try {
+				// clear
+				if (sevenHexagons != null) {
+					this.sevenHexagons.clear();
+				}
+				this.allSolutions.clear();
+				this.selectedSolutionIndex = 0;
+				// Load colors to each HexagonShape
+				sevenHexagons = loadFromFile();
+				this.h1.loadHexagon(sevenHexagons.get(0).getColorList(), sevenHexagons.get(0).getID());
+				this.h2.loadHexagon(sevenHexagons.get(1).getColorList(), sevenHexagons.get(1).getID());
+				this.h3.loadHexagon(sevenHexagons.get(2).getColorList(), sevenHexagons.get(2).getID());
+				this.h4.loadHexagon(sevenHexagons.get(3).getColorList(), sevenHexagons.get(3).getID());
+				this.h5.loadHexagon(sevenHexagons.get(4).getColorList(), sevenHexagons.get(4).getID());
+				this.h6.loadHexagon(sevenHexagons.get(5).getColorList(), sevenHexagons.get(5).getID());
+				this.h7.loadHexagon(sevenHexagons.get(6).getColorList(), sevenHexagons.get(6).getID());
+				// update instructions
+				this.infoText.setText("1. Click Solve!");
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
@@ -119,7 +150,7 @@ public class HexagonGUI extends Application {
 
 		// Help Menu Items
 		MenuItem about = new MenuItem("About...");
-		// TODO about.setOnAction(e -> aboutDialog);
+		about.setOnAction(e -> aboutDialog());
 		helpMenu.getItems().add(about);
 
 		// Menu Bar
@@ -179,9 +210,9 @@ public class HexagonGUI extends Application {
 		});
 
 		// Text indexOverListSize
-		this.selectedIndexOverListSize.setFill(Color.LIGHTGREY);
-		this.selectedIndexOverListSize.setStroke(Color.BLUEVIOLET);
-		this.selectedIndexOverListSize.setFont(Font.font("Arial", FontWeight.BOLD, 25));
+		this.infoText.setFill(Color.LIGHTGREY);
+		this.infoText.setStroke(Color.BLUEVIOLET);
+		this.infoText.setFont(Font.font("Arial", FontWeight.BOLD, 25));
 
 		// Hbox
 		HBox hbox = new HBox();
@@ -196,26 +227,30 @@ public class HexagonGUI extends Application {
 		bp.setStyle("-fx-background-color: #3a3a3a;");
 
 		// hex flower pane
-		this.p.getChildren().addAll(this.h1, this.h2, this.h3, this.h4, this.h5, this.h6, this.h7,
-				this.selectedIndexOverListSize);
+		this.p.getChildren().addAll(this.h1, this.h2, this.h3, this.h4, this.h5, this.h6, this.h7, this.infoText);
 
 		// Scene
 		Scene scene = new Scene(bp, 600, 600);
-		primaryStage.setScene(scene);
-		primaryStage.setTitle("Hexagon Puzzle Solver");
-		primaryStage.setResizable(false);
-		primaryStage.show();
+		this.primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("hexIcon.png")));
+		this.primaryStage.setScene(scene);
+		this.primaryStage.setTitle("Hexagon Puzzle Solver");
+		this.primaryStage.setResizable(false);
+		this.primaryStage.show();
 	}
+
 	// solves & paints first solution
 	private void solve() throws NullPointerException {
 		if (sevenHexagons == null || sevenHexagons.size() != 7) {
 			throw new NullPointerException();
 		}
 		this.allSolutions = HexagonSolver.getAllResults(sevenHexagons);
+		if (allSolutions.size() == 0) {
+			infoText.setText("No Solution Found!");
+		}
 		solved = true;
 		paintSolution();
 	}
-	
+
 	// Paints hex flower
 	private void paintSolution() {
 		paintHexagon(h1, 0);
@@ -226,8 +261,12 @@ public class HexagonGUI extends Application {
 		paintHexagon(h6, 5);
 		paintHexagon(h7, 6);
 	}
+
 	// paints individual Hexagon at SelectedSolutionIndex
-	private void paintHexagon(HexagonShape h, int hexagonIndex) {
+	private void paintHexagon(HexagonShape h, int hexagonIndex) throws NullPointerException {
+		if (allSolutions.size() == 0) {
+			throw new NullPointerException("no solutions");
+		}
 		List<HexagonPosition> solution = this.allSolutions.get(selectedSolutionIndex);
 
 		HexagonPosition hexPosition = solution.get(hexagonIndex);
@@ -237,14 +276,103 @@ public class HexagonGUI extends Application {
 
 	}
 
-	// displays the selectedIndexOverListSize
+	// displays the infoText
 	private void showSelectedIndex() {
-		p.getChildren().remove(this.selectedIndexOverListSize);
-		selectedIndexOverListSize.setText("Solution: " + (selectedSolutionIndex + 1) + "/" + allSolutions.size());
-		p.getChildren().add(selectedIndexOverListSize);
+		p.getChildren().remove(this.infoText);
+		infoText.setText("Solution: " + (selectedSolutionIndex + 1) + "/" + allSolutions.size());
+		p.getChildren().add(infoText);
 	}
-	
-	//Initialize sevenHexagons
+
+	private void aboutDialog() {
+		Alert alert = new Alert(AlertType.INFORMATION);
+		alert.setTitle("About");
+		alert.setHeaderText("");
+		alert.setContentText(
+				"Created By Marco Argentieri \n" + "\n CS2013: Data Structures \n" + "Algorithm using Recursion");
+		alert.initOwner(primaryStage);
+		alert.setGraphic(new ImageView((new Image(getClass().getResourceAsStream("hexIcon.png")))));
+
+		alert.showAndWait();
+	}
+
+	// user input this.sevenHexagons
+	private ArrayList<Hexagon> createHexagonList() {
+		this.sevenHexagons.clear();
+		this.allSolutions.clear();
+		this.selectedSolutionIndex = 0;
+
+		ArrayList<Hexagon> hexagons = new ArrayList<>();
+
+		for (int i = 1; i < 8; i++) {
+			TextInputDialog dialog = new TextInputDialog("");
+			dialog.setTitle("Hexagon Input");
+			dialog.setHeaderText("Colors: Red, Blue, Yellow, Green, Orange, Purple");
+			dialog.setContentText("Please choose six colors for Hexagon #" + i + "\nInput Example: \"RBYGOP\"");
+			dialog.initOwner(primaryStage);
+			Optional<String> result = dialog.showAndWait();
+
+			if (result.isPresent()) {
+				if (result.get().length() != 6 || !isValidColor(result)) {
+					i--;
+				} else if (result.get().length() == 6 || isValidColor(result)) {
+					int id = i;
+					result.ifPresent(name -> {
+						Hexagon h = new Hexagon(id, name.toUpperCase());
+						hexagons.add(h);
+					});
+				}
+			} else {
+				return null;
+			}
+
+		}
+		return hexagons;
+	}
+
+	private boolean isValidColor(Optional<String> color) {
+		String[] colors = color.get().split("");
+		boolean isValid;
+		for (int i = 0; i < 6; i++) {
+			isValid = colors[i].equalsIgnoreCase("R") || colors[i].equalsIgnoreCase("B")
+					|| colors[i].equalsIgnoreCase("Y") || colors[i].equalsIgnoreCase("G")
+					|| colors[i].equalsIgnoreCase("O") || colors[i].equalsIgnoreCase("P");
+			if (!isValid) {
+				return isValid;
+			}
+		}
+		return true;
+	}
+
+	// Load Hexagon List
+	private static ArrayList<Hexagon> loadFromFile() throws IOException {
+		String userDir = System.getProperty("user.home");
+		JFileChooser fc = new JFileChooser(userDir + "/Desktop");
+		fc.setFileFilter(new FileNameExtensionFilter("Hexagon List Text Files", "txt"));
+		fc.setDialogTitle("Select Hexagon List");
+		fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+		ArrayList<String> hexVals = null;
+		int retVal = fc.showOpenDialog(null);
+		if (retVal == JFileChooser.APPROVE_OPTION) {
+			File selectedFile = fc.getSelectedFile();
+
+			Scanner scanner = new Scanner(selectedFile);
+			hexVals = new ArrayList<>();
+
+			while (scanner.hasNext()) {
+				String lines[] = scanner.nextLine().split("\\r?\\n");
+				for (String line : lines) {
+					hexVals.addAll(Arrays.asList(line.split(" ")));
+				}
+			}
+
+			scanner.close();
+		}
+
+		return initializeHexagons(hexVals);
+
+	}
+
+	// Helper method to initialize sevenHexagons from String
 	private static ArrayList<Hexagon> initializeHexagons(ArrayList<String> hexValsIn) throws NullPointerException {
 		if (hexValsIn == null) {
 			throw new NullPointerException("null value list");
@@ -269,34 +397,6 @@ public class HexagonGUI extends Application {
 			System.out.println(h.toString());
 		}
 		return hexagons;
-	}
-
-	// Load Hexagon List
-	private static ArrayList<Hexagon> loadFromFile() throws IOException {
-		String userDir = System.getProperty("user.home");
-		JFileChooser fc = new JFileChooser(userDir + "/Desktop");
-		fc.setDialogTitle("Select Hexagon List");
-		fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
-		ArrayList<String> hexVals = null;
-		int retVal = fc.showOpenDialog(null);
-		if (retVal == JFileChooser.APPROVE_OPTION) {
-			File selectedFile = fc.getSelectedFile();
-
-			Scanner scanner = new Scanner(selectedFile);
-			hexVals = new ArrayList<>();
-
-			while (scanner.hasNext()) {
-				String lines[] = scanner.nextLine().split("\\r?\\n");
-				for (String line : lines) {
-					hexVals.addAll(Arrays.asList(line.split(" ")));
-				}
-			}
-
-			scanner.close();
-		}
-
-		return initializeHexagons(hexVals);
-
 	}
 
 	public static void main(String[] args) throws IOException {
