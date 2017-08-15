@@ -87,6 +87,7 @@ public class HexagonGUI extends Application {
 		createNew.setOnAction(e -> {
 			sevenHexagons = createHexagonList();
 			if (sevenHexagons != null) {
+				this.infoText.setText("New Hexagon List Loaded \n1. Click Solve!");
 				this.h1.loadHexagon(sevenHexagons.get(0).getColorList(), sevenHexagons.get(0).getID());
 				this.h2.loadHexagon(sevenHexagons.get(1).getColorList(), sevenHexagons.get(1).getID());
 				this.h3.loadHexagon(sevenHexagons.get(2).getColorList(), sevenHexagons.get(2).getID());
@@ -95,7 +96,7 @@ public class HexagonGUI extends Application {
 				this.h6.loadHexagon(sevenHexagons.get(5).getColorList(), sevenHexagons.get(5).getID());
 				this.h7.loadHexagon(sevenHexagons.get(6).getColorList(), sevenHexagons.get(6).getID());
 			} else
-				throw new NullPointerException();
+				throw new NullPointerException("null input list");
 		});
 		fileMenu.getItems().add(createNew);
 
@@ -276,7 +277,7 @@ public class HexagonGUI extends Application {
 
 	}
 
-	// displays the infoText
+	// displays the infoText detailing selectedIndex over allSolutions.size()
 	private void showSelectedIndex() {
 		p.getChildren().remove(this.infoText);
 		infoText.setText("Solution: " + (selectedSolutionIndex + 1) + "/" + allSolutions.size());
@@ -287,8 +288,12 @@ public class HexagonGUI extends Application {
 		Alert alert = new Alert(AlertType.INFORMATION);
 		alert.setTitle("About");
 		alert.setHeaderText("");
-		alert.setContentText(
-				"Created By Marco Argentieri \n" + "\n CS2013: Data Structures \n" + "Algorithm using Recursion");
+		alert.setContentText("Created By Marco Argentieri \n" + "\nCS2013: Data Structures \n"
+				+ "Algorithm using Recursion\n"
+				+ "\nHexagon Puzzle Solver\n"
+				+ "\nYou need to place 7 hexagon tiles on the board such that the first hexagon is placed in the center, and the remaining 6 are placed going around the center.\n"
+				+ "\nThe sides of each hexagon adjacent to another hexagon must be the same color in order for the solution to be valid\n"
+				+ "\nFind all Solutions.");
 		alert.initOwner(primaryStage);
 		alert.setGraphic(new ImageView((new Image(getClass().getResourceAsStream("hexIcon.png")))));
 
@@ -297,17 +302,19 @@ public class HexagonGUI extends Application {
 
 	// user input this.sevenHexagons
 	private ArrayList<Hexagon> createHexagonList() {
-		this.sevenHexagons.clear();
+		if (sevenHexagons != null) {
+			this.sevenHexagons.clear();
+		}
 		this.allSolutions.clear();
 		this.selectedSolutionIndex = 0;
 
 		ArrayList<Hexagon> hexagons = new ArrayList<>();
 
 		for (int i = 1; i < 8; i++) {
-			TextInputDialog dialog = new TextInputDialog("");
+			TextInputDialog dialog = new TextInputDialog("RGYBOP");
 			dialog.setTitle("Hexagon Input");
 			dialog.setHeaderText("Colors: Red, Blue, Yellow, Green, Orange, Purple");
-			dialog.setContentText("Please choose six colors for Hexagon #" + i + "\nInput Example: \"RBYGOP\"");
+			dialog.setContentText("Please choose six colors for Hexagon #" + i + "\nInput Example: PPRGPB");
 			dialog.initOwner(primaryStage);
 			Optional<String> result = dialog.showAndWait();
 
